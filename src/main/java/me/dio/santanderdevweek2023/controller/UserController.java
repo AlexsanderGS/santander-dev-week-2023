@@ -1,43 +1,54 @@
 package me.dio.santanderdevweek2023.controller;
 
 import java.net.URI;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import me.dio.santanderdevweek2023.domain.model.User;
+import me.dio.santanderdevweek2023.controller.dto.UserDto;
 import me.dio.santanderdevweek2023.service.UserService;
 
+@CrossOrigin
 @RestController
 @RequestMapping("/users")
-public class UserController {
+public record UserController(UserService userService) {
 	
-	private final UserService userService;
-	
-	public UserController(UserService userService) {
-		this.userService = userService;
-	}
-	
-	@GetMapping("/{id}")
-	public ResponseEntity<User> findById(@PathVariable Long id) {
-		var user = userService.findById(id);
-		return ResponseEntity.ok(user);
-	}
-	
-	@PostMapping
-	public ResponseEntity<User> create(@RequestBody User userToCreate) {
-		var userCreated = userService.create(userToCreate);
-		URI location = ServletUriComponentsBuilder.fromCurrentRequest()
-				.path("/{id}")
-				.buildAndExpand(userCreated.getId())
-				.toUri();
-		return ResponseEntity.created(location).body(userCreated);
-	}
+	@GetMapping
+    public ResponseEntity<List<UserDto>> findAll() {
+        var users = userService.findAll();
+        var usersDto = users.stream().map(UserDto::new).collect(Collectors.toList());
+        return ResponseEntity.ok(usersDto);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<UserDto> findById(@PathVariable Long id) {
+        var user = userService.findById(id);
+        return ResponseEntity.ok(new UserDto(user));
+    }
+
+    @PostMapping
+    public ResponseEntity<UserDto> create(@RequestBody UserDto userDto) {
+        var user = userService.create(userDto.toModel());
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(user.getId())
+                .toUri();
+        return ResponseEntity.created(location).body(new UserDto(user));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<UserDto> update(@PathVariable Long id, @RequestBody UserDto userDto) {
+        var user = userService.update(id, userDto.toModel());
+        return ResponseEntity.ok(new UserDto(user));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        userService.delete(id);
+        return ResponseEntity.noContent().build();
+    }
 
 }
